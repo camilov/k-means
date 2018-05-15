@@ -1,5 +1,10 @@
 //g++ -std=c++11 -fopenmp -o netflix  netflix.cc
 // ./netflix combined_data_1.txt
+
+//compilar distribuido
+//g++ -std=c++11 -L/usr/local/lib -I/usr/local/include netflix.cc -o netflix -lzmqpp -lz
+//run
+//LD_LIBRARY_PATH=/usr/local/lib/ ./netflix data.txt
 #include <fstream>
 #include <iostream>
 #include <omp.h>
@@ -10,8 +15,9 @@
 #include <vector>
 #include <random>
 #include <tuple>
+#include <zmqpp/zmqpp.hpp>
 
-
+using namespace zmqpp;
 using namespace std;
 using SPoint = vector<pair<size_t, double>>;
 using Rates = map<pair<string, string>, double>; // (user,movie) -> rate
@@ -160,7 +166,8 @@ vector<double> normcentroid(const vector<rate>& centroids){
         }
 */
 
-double Coseno_similarity(const SPoint& user, const rate& rates_centroid_actual,const double normauser,const  double normacentroids) {
+double Coseno_similarity(const SPoint& user, const rate& rates_centroid_actual,
+  const double normauser,const  double normacentroids) {
 
   double d = 0.0;
           
@@ -174,7 +181,8 @@ double Coseno_similarity(const SPoint& user, const rate& rates_centroid_actual,c
 
           
     
-size_t closestCentroid(const SPoint& user, const vector<rate>& centroids,const double normauser,const  vector<double>& normacentroids) 
+size_t closestCentroid(const SPoint& user, const vector<rate>& centroids,const double normauser,
+  const  vector<double>& normacentroids) 
       {
   double d = numeric_limits<double>::max();
   size_t c = 0;      
@@ -189,7 +197,8 @@ size_t closestCentroid(const SPoint& user, const vector<rate>& centroids,const d
   return c;
 }
 
-vector<size_t> cluster(const vector<SPoint>& dataset,const vector<rate>& centroids,const vector<double>& normauser,const vector<double>& normacentroids) {
+vector<size_t> cluster(const vector<SPoint>& dataset,const vector<rate>& centroids,
+  const vector<double>& normauser,const vector<double>& normacentroids) {
 
   size_t n = dataset.size(); 
   vector<size_t> clustering(n, 0);
@@ -281,11 +290,57 @@ vector<size_t> kmeans(const vector<SPoint>& dataset, size_t k,size_t dim, double
 int main(int argc, char** argv) {
   if (argc != 2)
       return -1;
-  string fname(argv[1]);
-  Rates rates = readNetflix(fname);
-  vector<SPoint> ds = createPoints(rates);
-  vector<rate> centroids = randomcentroids(5, 12);
-  vector<size_t> clustering(ds.size(),0);
-  clustering = kmeans(ds,5,12,0.1);
+  string ipserver="localhost";
+  context ctx;
+  socket socket_out(ctx,socket_type::req);
+  //Conexion Server
+  const string conexionserver = "tcp://"+ipserver+":5001";
+
+
+  socket_out.connect(conexionserver);
+
+  string saludo="oe";
+  zmqpp::message iniciando;
+  iniciando << saludo;
+  cout<<"Saludando"<<endl;
+  socket_out.send(iniciando);
+
+  while (true){
+    string fname(argv[1]);
+    Rates rates = readNetflix(fname);
+    vector<SPoint> ds = createPoints(rates);
+    vector<rate> centroids = randomcentroids(5, 12);
+    vector<size_t> clustering(ds.size(),0);
+
+    string recibido;
+    zmqpp::message msg;
+    socket_out.receive(msg);
+    msg >> recibido;
+    cout<<"El k recibido es: ----------->"<<recibido<<endl<<endl;
+    string result;
+    if(recibido != "bye"){
+
+      clustering = kmeans(ds,atoi(recibido.c_str()),12,0.1); // Timer tss;
+      cout<<endl;
+      
+    }else
+       break;
+       string resultado = clustering +"-"+ recibido.c_str()+" ";
+       zmqpp::message mensaje;
+       mensaje << resultado ;
+       cout<<"resultado: "<<resultado<<endl<<endl;
+       socket_out.send(mensaje); 
+
+  }
+
+   
+    //else
+      //break;
+    /*string resultado = result +"-"+ recibido.c_str()+" ";
+    zmqpp::message mensaje;
+    mensaje << resultado ;
+    cout<<"resultado: "<<resultado<<endl<<endl;
+      socket_out.send(mensaje);  
+  */
   return 0;
 }
