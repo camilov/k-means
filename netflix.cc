@@ -102,13 +102,7 @@ vector<rate> randomcentroids(size_t k, size_t num_movies) {
            c[i][j] = r;
       }    
   }
-          
-  for(size_t i=0; i < 3;i++){
-     cout<< "fila"<<i<<endl;
-     for(size_t j=0;j<=num_movies;j++){
-        cout << " "<< c[i][j] << " ";
-      }
-  }
+  
   return c;
 }
         
@@ -257,7 +251,7 @@ double sacar_ssd(const vector<double>& angleusers,const vector<double>& angleuse
 }
         
 
-vector<size_t> kmeans(const vector<SPoint>& dataset, size_t k,size_t dim, double epsilon) {
+pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_t dim, double epsilon) {
   size_t n = dataset.size();
   vector<rate> centroids = randomcentroids(k, dim);
   vector<double> normauser= normuser(dataset);
@@ -284,7 +278,7 @@ vector<size_t> kmeans(const vector<SPoint>& dataset, size_t k,size_t dim, double
 
   }while(d>epsilon);
 
-  return clustering;
+  return {clustering,ssd};
 }
 
 int main(int argc, char** argv) {
@@ -293,13 +287,11 @@ int main(int argc, char** argv) {
   string ipserver="localhost";
   context ctx;
   socket socket_out(ctx,socket_type::req);
-  //Conexion Server
   const string conexionserver = "tcp://"+ipserver+":5001";
-
 
   socket_out.connect(conexionserver);
 
-  string saludo="oe";
+  string saludo= "pide";
   zmqpp::message iniciando;
   iniciando << saludo;
   cout<<"Saludando"<<endl;
@@ -309,38 +301,32 @@ int main(int argc, char** argv) {
     string fname(argv[1]);
     Rates rates = readNetflix(fname);
     vector<SPoint> ds = createPoints(rates);
-    vector<rate> centroids = randomcentroids(5, 12);
     vector<size_t> clustering(ds.size(),0);
-
+    double ssd;
+  
     string recibido;
     zmqpp::message msg;
     socket_out.receive(msg);
     msg >> recibido;
-    cout<<"El k recibido es: ----------->"<<recibido<<endl<<endl;
+    cout<<"El k recibido es: -->"<<recibido<<endl<<endl;
     string result;
+
     if(recibido != "bye"){
 
-      clustering = kmeans(ds,atoi(recibido.c_str()),12,0.1); // Timer tss;
+      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.0872665); // Timer tss;
+      result = to_string(ssd);
       cout<<endl;
+      string resultado = result +"-"+recibido.c_str();
+      zmqpp::message mensaje;
+      mensaje << resultado ;
+     // cout<<"resultado: "<<resultado<<endl<<endl;
+      socket_out.send(mensaje); 
+      //cout<<"ssd"<< ssd<<endl;
       
     }else
-       break;
-       string resultado = clustering +"-"+ recibido.c_str()+" ";
-       zmqpp::message mensaje;
-       mensaje << resultado ;
-       cout<<"resultado: "<<resultado<<endl<<endl;
-       socket_out.send(mensaje); 
-
-  }
-
-   
-    //else
-      //break;
-    /*string resultado = result +"-"+ recibido.c_str()+" ";
-    zmqpp::message mensaje;
-    mensaje << resultado ;
-    cout<<"resultado: "<<resultado<<endl<<endl;
-      socket_out.send(mensaje);  
-  */
-  return 0;
+      break;
+    
+  }  
+ return 0;
 }
+
