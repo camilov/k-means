@@ -195,8 +195,7 @@ vector<size_t> cluster(const vector<SPoint>& dataset,const vector<rate>& centroi
   const vector<double>& normauser,const vector<double>& normacentroids) {
 
   size_t n = dataset.size(); 
-  vector<size_t> clustering(n, 0);
-       
+  vector<size_t> clustering(n, 0);       
   for (size_t i = 0; i < n; i++) {
        size_t c;
        c = closestCentroid(dataset[i], centroids,normauser[i],normacentroids);
@@ -284,6 +283,7 @@ pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_
 int main(int argc, char** argv) {
   if (argc != 2)
       return -1;
+  
   string ipserver="localhost";
   context ctx;
   socket socket_out(ctx,socket_type::req);
@@ -291,19 +291,22 @@ int main(int argc, char** argv) {
 
   socket_out.connect(conexionserver);
 
-  string saludo= "pide";
-  zmqpp::message iniciando;
-  iniciando << saludo;
-  cout<<"Saludando"<<endl;
-  socket_out.send(iniciando);
+  
 
   while (true){
+    string saludo= "Dame k";
+    zmqpp::message iniciando;
+    iniciando << saludo;
+    cout<<"k pedido"<<endl;
+    socket_out.send(iniciando);
+
+
     string fname(argv[1]);
     Rates rates = readNetflix(fname);
     vector<SPoint> ds = createPoints(rates);
     vector<size_t> clustering(ds.size(),0);
-    double ssd;
-  
+    double ssd =0.0;
+
     string recibido;
     zmqpp::message msg;
     socket_out.receive(msg);
@@ -311,22 +314,36 @@ int main(int argc, char** argv) {
     cout<<"El k recibido es: -->"<<recibido<<endl<<endl;
     string result;
 
-    if(recibido != "bye"){
+    if(recibido != "terminado"){
 
-      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.0872665); // Timer tss;
+      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),4499,0.087); // Timer tss;    
       result = to_string(ssd);
       cout<<endl;
+
       string resultado = result +"-"+recibido.c_str();
       zmqpp::message mensaje;
       mensaje << resultado ;
-     // cout<<"resultado: "<<resultado<<endl<<endl;
+      cout<<" enviando: "<<resultado<<endl;
       socket_out.send(mensaje); 
-      //cout<<"ssd"<< ssd<<endl;
       
-    }else
-      break;
+     
+      
+    }else{
+      string a;
+      zmqpp::message m;
+      socket_out.receive(msg);
+      msg >> a;
+      cout << "res "<< a<<endl;
+    }
+      
+      //cout<<"ssd"<< ssd<<endl;
+
+      //break;
+      
+ 
     
-  }  
- return 0;
+  //}  */
+  return 0;
+
 }
 
