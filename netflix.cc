@@ -134,31 +134,6 @@ vector<double> normcentroid(const vector<rate>& centroids){
   return normacentros;
 }
 
-/*
-        double angle( const SPoint& p, const SPoint& q) {
-         
-          double p_punto=0;
-          double norma_A=0;
-          double norma_B=0;
-          #pragma omp parallel for
-          for (size_t i = 0; i < p.size(); i++) {
-            p_punto=(p[i].first*q[i].first)+(p[i].second*q[i].second);
-            norma_A=(sqrt(pow(p[i].first,2)+pow(p[i].second,2)));
-            norma_B=(sqrt(pow(q[i].first,2)+pow(q[i].second,2)));
-          }
-
-          double A_Punto_B=norma_A*norma_B;
-          double division=0;
-            if (A_Punto_B != 0) {
-               division=p_punto/A_Punto_B;
-             }
-
-          double arc_cos=acos(division);
-          double rad_grados=(arc_cos*180)/3.1415926535;
-
-          return rad_grados;
-        }
-*/
 
 double Coseno_similarity(const SPoint& user, const rate& rates_centroid_actual,
   const double normauser,const  double normacentroids) {
@@ -175,7 +150,7 @@ double Coseno_similarity(const SPoint& user, const rate& rates_centroid_actual,
 
           
     
-size_t closestCentroid(const SPoint& user, const vector<rate>& centroids,const double normauser,
+tuple<size_t ,double> closestCentroid(const SPoint& user, const vector<rate>& centroids,const double normauser,
   const  vector<double>& normacentroids) 
       {
   double d = numeric_limits<double>::max();
@@ -188,20 +163,23 @@ size_t closestCentroid(const SPoint& user, const vector<rate>& centroids,const d
           c = i;
       }
   }   
-  return c;
+  return make_tuple(c,d);
 }
 
-vector<size_t> cluster(const vector<SPoint>& dataset,const vector<rate>& centroids,
+pair<vector<size_t>,double> cluster(const vector<SPoint>& dataset,const vector<rate>& centroids,
   const vector<double>& normauser,const vector<double>& normacentroids) {
 
   size_t n = dataset.size(); 
-  vector<size_t> clustering(n, 0);       
-  for (size_t i = 0; i < n; i++) {
+  vector<size_t> clustering(n, 0); 
+  double ssd = 0.0;      
+  for (size_t i = 1; i < n; i++) {
        size_t c;
-       c = closestCentroid(dataset[i], centroids,normauser[i],normacentroids);
+       double d;
+       tie(c,d) = closestCentroid(dataset[i], centroids,normauser[i],normacentroids);
        clustering[i] = c;
+       ssd += d;
   }
-  return clustering;
+  return {clustering,ssd};
 }
 
 vector<rate> newCentroids(const vector<size_t>& clustering, const vector<SPoint>& dataset, vector<rate>& centroids){
@@ -265,10 +243,9 @@ pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_
      ssdPrev = ssd;
      cout << "Iteration " << iter << endl;
      normacentroides=normcentroid(centroids);
-     clustering = cluster(dataset, centroids,normauser,normacentroides);
-     printClustering(dataset,clustering,k);
+     tie(clustering,ssd)= cluster(dataset, centroids,normauser,normacentroides);
+     
      new_centroids = newCentroids(clustering, dataset, centroids);
-     ssd = ssd_centroides(new_centroids,centroids);
      centroids=new_centroids;
      cout << "SSD: " << ssd << endl;
      iter++;
@@ -276,6 +253,8 @@ pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_
      cout << "----> " << d << endl;
 
   }while(d>epsilon);
+
+  printClustering(dataset,clustering,k);
 
   return {clustering,ssd};
 }
@@ -318,7 +297,7 @@ int main(int argc, char** argv) {
 
     if(recibido != "terminado"){
 
-      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),4499,0.087); // Timer tss;    
+      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.087); // Timer tss;    
       result = to_string(ssd);
       cout<<endl;
 
@@ -328,13 +307,14 @@ int main(int argc, char** argv) {
       cout<<" enviando: "<<resultado<<endl;
       socket_out.send(mensaje); 
       
-    }else{
+    }else
+      break;
       string a;
       zmqpp::message m;
       socket_out.receive(msg);
       msg >> a;
       cout << "res "<< a<<endl;
-      }
+  
 
     }
 

@@ -15,17 +15,7 @@
 using namespace std;
 using namespace zmqpp;
 
-bool evalua(vector<double>&kresultados, vector<double>&pendientes ){
 
-	
-	double pendiente =0.0;
-	double punto1    =0.0;
-	double punto2    =0.0;
-
-
-
-	return true;
-}
 
 
 int primero=1,ultimo=150,mitad=ultimo/2;
