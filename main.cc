@@ -28,7 +28,7 @@ bool evalua(vector<double>&kresultados, vector<double>&pendientes ){
 }
 
 
-int primero=1,ultimo=600,mitad=ultimo/2;
+int primero=1,ultimo=150,mitad=ultimo/2;
 vector<int> elegidos;
 vector<int> enviados;
 vector<double> kresultados(ultimo+1,0);
@@ -61,8 +61,9 @@ void Optimo(){
 	int contar=0;
 	double punto1 = 0.0;
 	double punto2 = 0.0;
-	double pendiente =0.0;
-	double pendiendMayor = 0.0;
+	double pendiente1 =0.0;
+	double pendiente2 =0.0;
+	double pendienteMayor = 0.0;
 	
 	while(true){
 
@@ -70,10 +71,10 @@ void Optimo(){
 		zmqpp::message saludo;
 		servidor.receive(saludo);
 		saludo >> inicio;
-		cout << " cliente: " << inicio <<endl;
+		cout << " Iniciando.... " << inicio <<endl;
 		string resultado, k;
 				
-		if(inicio == "pide"){
+		if(inicio == "k"){
 			if(i<elegidos.size()){
 				int k=elegidos[i];
 				string ki= to_string(k);
@@ -112,26 +113,31 @@ void Optimo(){
 
 			if(contar >=3){
 
-				//bool a = evaluar(kresultados,pendientes);
-				for(int i = 1; i<kresultados.size();i++){
-					if(kresultados[i] != 0){
-						pendiente += ((i-(i-1))/(kresultados[i]-kresultados[i-1]));
-				    	pendientes.push_back(pendiente);
-					}
-				}
+	
+				pendiente1 =((kresultados[primero]- kresultados[mitad])/(mitad-primero));
+				pendiente2 =((kresultados[mitad]- kresultados[ultimo])/(ultimo-mitad)); 
+				
+				if(pendiente1 > pendiente2 ){
 
-
-				for(int i = 0;i<pendientes.size();i++){
-					if(mayor<pendientes[i]){				
-						pendiendMayor = pendientes[i];
-					}
+					ultimo = mitad;
+					mitad = ultimo/2;
+				}else{
+					primero = mitad;
+					mitad=ultimo-(mitad/2);
 				}
+				elegidos.clear();
+				elegidos.clear();
+
+					
+			}else{
+				string z = "espere..";
+				zmqpp::message envioz;
+				envioz << z;
+				servidor.send(envioz);
+
 			}
-			
-			
 		}	
-	}
-		
+	}		
 }
 
 

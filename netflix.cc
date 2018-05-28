@@ -291,22 +291,24 @@ int main(int argc, char** argv) {
 
   socket_out.connect(conexionserver);
 
+
+  string fname(argv[1]);
+  Rates rates = readNetflix(fname);
+  vector<SPoint> ds = createPoints(rates);
+  vector<size_t> clustering(ds.size(),0);
+  double ssd =0.0;
   
 
   while (true){
-    string saludo= "Dame k";
+
+    string saludo= "k";
     zmqpp::message iniciando;
     iniciando << saludo;
     cout<<"k pedido"<<endl;
     socket_out.send(iniciando);
 
 
-    string fname(argv[1]);
-    Rates rates = readNetflix(fname);
-    vector<SPoint> ds = createPoints(rates);
-    vector<size_t> clustering(ds.size(),0);
-    double ssd =0.0;
-
+  
     string recibido;
     zmqpp::message msg;
     socket_out.receive(msg);
@@ -326,24 +328,16 @@ int main(int argc, char** argv) {
       cout<<" enviando: "<<resultado<<endl;
       socket_out.send(mensaje); 
       
-     
-      
     }else{
       string a;
       zmqpp::message m;
       socket_out.receive(msg);
       msg >> a;
       cout << "res "<< a<<endl;
+      }
+
     }
-      
-      //cout<<"ssd"<< ssd<<endl;
 
-      //break;
-      
- 
-    
-  //}  */
-  return 0;
-
+    return 0;      
 }
 
