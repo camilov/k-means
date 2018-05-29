@@ -1,8 +1,7 @@
 //g++ -std=c++11 -fopenmp -o netflix  netflix.cc
 // ./netflix combined_data_1.txt
-
 //compilar distribuido
-//g++ -std=c++11 -L/usr/local/lib -I/usr/local/include netflix.cc -o netflix -lzmqpp -lz
+//g++ -std=c++11 -o netflix netflix.cc -lzmq -lzmqpp
 //run
 //LD_LIBRARY_PATH=/usr/local/lib/ ./netflix data.txt
 #include <fstream>
@@ -270,24 +269,23 @@ int main(int argc, char** argv) {
 
   socket_out.connect(conexionserver);
 
-
-  string fname(argv[1]);
-  Rates rates = readNetflix(fname);
-  vector<SPoint> ds = createPoints(rates);
-  vector<size_t> clustering(ds.size(),0);
-  double ssd =0.0;
+ 
   
+  string saludo= "k";
+  zmqpp::message iniciando;
+  iniciando << saludo;
+  cout<<"k pedido"<<endl;
+  socket_out.send(iniciando);  
+
 
   while (true){
-
-    string saludo= "k";
-    zmqpp::message iniciando;
-    iniciando << saludo;
-    cout<<"k pedido"<<endl;
-    socket_out.send(iniciando);
-
-
-  
+    
+   string fname(argv[1]);
+   Rates rates = readNetflix(fname);
+   vector<SPoint> ds = createPoints(rates);
+   vector<size_t> clustering(ds.size(),0);
+   double ssd =0.0;
+    
     string recibido;
     zmqpp::message msg;
     socket_out.receive(msg);
@@ -300,22 +298,15 @@ int main(int argc, char** argv) {
       tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.087); // Timer tss;    
       result = to_string(ssd);
       cout<<endl;
+      
+    }else
+      break;
 
       string resultado = result +"-"+recibido.c_str();
       zmqpp::message mensaje;
       mensaje << resultado ;
       cout<<" enviando: "<<resultado<<endl;
       socket_out.send(mensaje); 
-      
-    }else
-      break;
-      string a;
-      zmqpp::message m;
-      socket_out.receive(msg);
-      msg >> a;
-      cout << "res "<< a<<endl;
-  
-
     }
 
     return 0;      
