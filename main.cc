@@ -117,7 +117,7 @@ void kOptimo(){
 	double pendiente2 =0.0;
 	int op=1;
 	int banMensaje=0;
-	int divi =8; 
+	int divi =2; 
 	int banderafinal=0;
 	bool seguir;
 
@@ -163,55 +163,55 @@ void kOptimo(){
 
 			kresultados[pareja.second]=pareja.first;
 
-			int ksito;
-			string puntoya;
-			for(int p=i;p<elegidos.size();){
-				bool a=verificar(kresultados,elegidos[p]);
-				bool b=verificar2(enviados,elegidos[p]);
-				if (a or b){
-					p++;
-					i=p;
+			cout <<" k: " << kresultados[i] <<endl;
+			
+			if(kresultados[ultimo] != '\0'){
+				double Var1= atan((kresultados[primero]-kresultados[mitad])/(mitad-primero)) * 180 / M_PI;
+				double Var2= atan((kresultados[mitad]-kresultados[ultimo])/(ultimo-mitad)) * 180 / M_PI;
+				double valor1;
+				double valor2;
+				int ult=ultimo;
+				int pri=primero;
+				int aux;
+				if(Var1 > 45)
+					valor1=Var1-45;
+				else
+					valor1=45-Var1;
+				if(Var2 > 45)
+					valor2=Var2-45;
+				else
+					valor2=45-Var2;
+				if(valor1 <= valor2){
+					ultimo=mitad;
+					mitad=ultimo/2;
 				}
 				else{
-					i=p;
-					p=elegidos.size();
+					primero=mitad;
+					mitad=ultimo-(mitad/2);
 				}
-			}
-			if(i+1 >= elegidos.size()){
-				enviados.push_back(elegidos[elegidos.size()-1]);
-				ksito=primero;
-			}
-			else{		
-				enviados.push_back(elegidos[i]);
-				ksito=elegidos[i];
-			}
-			if(banderafinal==1){
-				puntoya="terminado";
-				cout <<"El k optimo se encuentra entre el "<<primero<<" y el "<<ultimo<<endl; 
-			}	
-			else
-				puntoya= to_string(ksito);
-			zmqpp::message enviok;
-			enviok << puntoya;
-			servidor.send(enviok);	
-		}
-		if(enviados[enviados.size()-1] == elegidos[elegidos.size()-1]){
-			if (op == 1){
-				Repartir(elegidos,enviados,ultimo,divi);
-				op=2;	
-			}
-			else{
-				if(verificar(kresultados,ultimo)){
-					seguir=evaluar(elegidos,enviados,kresultados,primero,mitad,ultimo,divi);
-					if (seguir){
-						banderafinal=1;
-					}
+				elegidos.clear();
+				enviados.clear();
+				aux=(ult-pri)/divi;
+				int ban=aux;
+				//if (aux <= 1)
+				//	{return true;}	
+				cout << "ultimo: "<<ultimo<<" ----- "<< "Mitad: " <<mitad <<"------"<< " aux: "<< aux <<endl;
+				for(int i=0;primero + aux<ultimo;i++){
+					//cout<< aux <<"  aux "<< endl;
+					elegidos.push_back(aux);
+					aux=aux+ban;
+
 				}
-
+			}else{
+			  string  enviar= "terminado";
+			  zmqpp::message enviando;
+			  enviando << enviar;
+			  servidor.send(enviando);
+			  cout << "Enviando : " << enviar <<endl;
 			}
-
-			i=0;
+			  
 		}
+
 			
 	}		
 }
