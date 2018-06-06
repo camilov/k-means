@@ -156,7 +156,8 @@ tuple<size_t ,double> closestCentroid(const SPoint& user, const vector<rate>& ce
       {
   double d = numeric_limits<double>::max();
   size_t c = 0;      
-                
+  
+  #pragma omp parallel for              
   for (size_t i = 0; i < centroids.size(); i++) {
       double dt = Coseno_similarity(user, centroids[i],normauser, normacentroids[i]);
       if (dt < d) {
@@ -191,6 +192,7 @@ vector<rate> newCentroids(const vector<size_t>& clustering, const vector<SPoint>
   vector<double> count(k, 0.0);
   size_t indice_centroide;
   size_t indice_peli;
+  
   for (size_t i = 0; i < dataset.size(); i++) {
       indice_centroide = clustering[i];
       for (size_t j = 0; j < dataset[i].size(); j++) {
@@ -200,10 +202,10 @@ vector<rate> newCentroids(const vector<size_t>& clustering, const vector<SPoint>
      count[indice_centroide]++;
   }
 
-  #pragma omp parallel for
+  #pragma omp parallel
     for (size_t i = 0; i < k; i++) {
          for (size_t j = 0; j <= dim; j++) {
-            //#pragma omp critical
+             #pragma omp critical
              newCentroids[i][j] /= count[i];
           }
     }
@@ -214,11 +216,6 @@ vector<rate> newCentroids(const vector<size_t>& clustering, const vector<SPoint>
 
 
 pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_t dim, double epsilon) {
-  
-  std::clock_t start;
-  double duration;
-  start = std::clock();
-
   size_t n = dataset.size();
   vector<rate> centroids = randomcentroids(k, dim);
   vector<double> normauser= normuser(dataset);
@@ -241,106 +238,38 @@ pair<vector<size_t>,double> kmeans(const vector<SPoint>& dataset, size_t k,size_
      iter++;
      d = abs(ssdPrev - ssd);
      cout << "----> " << d << endl;
-     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-     std::cout<<"Tiempo de ejecucion: "<< duration <<" ms"<<"\n";
 
   }while(d>epsilon);
 
-  printClustering(dataset,clustering,k);
-
+  
   return {clustering,ssd};
 }
 
 int main(int argc, char** argv) {
   if (argc != 2)
       return -1;
-  
-  
 
-  //string ipserver="localhost";
-  string ipserver(argv[1]);
-  context ctx;
-  socket socket_out(ctx,socket_type::req);
-  const string conexionserver = "tcp://"+ipserver+":5001";
+  std::clock_t start;
+  double duration;
+  start = std::clock();
 
-  socket_out.connect(conexionserver);
+  cout <<"Ingrese k a procesar" <<"\n" <<endl;
+  size_t k;
+  cin>> k;
 
- // string fname(argv[1]);
-  string fname = "data.txt";
+  string fname(argv[1]);
   Rates rates = readNetflix(fname);
   vector<SPoint> ds = createPoints(rates);
   vector<size_t> clustering(ds.size(),0);
   double ssd =0.0;
-    
+
+  tie(clustering,ssd) = kmeans(ds,k,12,0.087); // Timer tss;    
+
   
-  string saludo= "k";
-  zmqpp::message iniciando;
-  iniciando << saludo;
-  //cout<<"k pedido"<<endl;
-  socket_out.send(iniciando);
+  printClustering(ds,clustering,k);
 
- 
-  bool parada=true;
-  while (parada){
-
-    string recibido;
-    zmqpp::message msg;
-    socket_out.receive(msg);
-    msg >> recibido;
-   // cout<<"El mensaje recibido es--> "<<recibido<<endl<<endl;
-    string result;
-    
-
-    if(recibido == "espere"){
-      parada= false;
-    }
-    else{
-      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.087); // Timer tss;    
-      result = to_string(ssd);
-      cout<<endl;     
-
-       string resultado = result +"-"+recibido.c_str();
-      zmqpp::message mensaje;
-      mensaje << resultado ;
-     // cout<<" enviando: "<<resultado<<endl;
-      socket_out.send(mensaje); 
-
-    }
-
-    /*
-    if(recibido != "espere"){
-
-      tie(clustering,ssd) = kmeans(ds,atoi(recibido.c_str()),12,0.087); // Timer tss;    
-      result = to_string(ssd);
-      cout<<endl;     
-
-       string resultado = result +"-"+recibido.c_str();
-      zmqpp::message mensaje;
-      mensaje << resultado ;
-     // cout<<" enviando: "<<resultado<<endl;
-      socket_out.send(mensaje); 
-     
-    }else{
-      if(recibido == "espere"){
-
-        string saludo= "espero";
-        zmqpp::message iniciando;
-        iniciando << saludo;
-        //cout<<"k pedido"<<endl;
-        socket_out.send(iniciando);
-      }else{
-        string saludo= "k";
-        zmqpp::message iniciando;
-        iniciando << saludo;
-        //cout<<"k pedido"<<endl;
-        socket_out.send(iniciando);
-      }
-      
-
-    }*/
-
-
-  }
+  duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
+  std::cout<<"Tiempo de ejecucion: "<< duration <<" ms"<<"\n";
 
 
   return 0;      

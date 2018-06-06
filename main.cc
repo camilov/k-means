@@ -8,84 +8,11 @@
 #include <tuple>
 #include <math.h>
 #include <cstdlib>
-//#include "timer.hh"
 #include <zmqpp/zmqpp.hpp>
 #include <thread>
 
 using namespace std;
 using namespace zmqpp;
-
-bool evaluar(vector <int> &elegidos,vector <int> &enviados,vector <double> &kresultados,
-	int &primero,int &mitad,int &ultimo,int divi){
-	double Var1= atan((kresultados[primero]-kresultados[mitad])/(mitad-primero)) * 180 / M_PI;
-	double Var2= atan((kresultados[mitad]-kresultados[ultimo])/(ultimo-mitad)) * 180 / M_PI;
-	double valor1;
-	double valor2;
-	int ult=ultimo;
-	int pri=primero;
-	int aux;
-	if(Var1 > 45)
-		valor1=Var1-45;
-	else
-		valor1=45-Var1;
-	if(Var2 > 45)
-		valor2=Var2-45;
-	else
-		valor2=45-Var2;
-	if(valor1 <= valor2){
-		ultimo=mitad;
-		mitad=ultimo/2;
-	}
-	else{
-		primero=mitad;
-		mitad=ultimo-(mitad/2);
-	}
-	elegidos.clear();
-	enviados.clear();
-	aux=(ult-pri)/divi;
-	int ban=aux;
-	if (aux <= 1)
-		return true;
-	cout << "ultimo: "<<ultimo<<" ----- "<< "Mitad: " <<mitad <<"------"<< " aux: "<< aux <<endl;
-	for(int i=0;primero + aux<ultimo;i++){
-		//cout<< aux <<"  aux "<< endl;
-		elegidos.push_back(aux);
-		aux=aux+ban;
-
-	}
-	return false;
-}
-
-void Repartir(vector <int> &elegidos,vector <int> &enviados, int ultimo, int divi){
-	int aux=ultimo/divi;
-	int ban=aux;
-	elegidos.clear();
-	enviados.clear();
-	for(int i=0;aux<ultimo;i++){
-		//cout<< aux <<"  aux "<< endl;
-		elegidos.push_back(aux);
-		aux=aux+ban;
-	}
-}
-
-bool verificar(vector <double> &kdos,int &ultimo){
-
-	if(kdos[ultimo] != '\0'){
-			return true;
-		}
-	
-	return false;
-}
-
-bool verificar2(vector<int> &enviados,int &ultimo){
-
-	for(int i=0;i< enviados.size();i++){
-		if(enviados[i] == ultimo){
-			return true;
-		}
-	}
-	return false;
-}
 
 
 
@@ -97,6 +24,7 @@ vector<double> pendientes;
 vector<double> valor;
 vector<double> posicion;
 pair<double,int> pareja;
+vector<double>mejor;
 int contar=0;
 
 
@@ -117,20 +45,27 @@ void kOptimo(){
 	double pendiente2 =0.0;
 	int op=1;
 	int banMensaje=0;
-	int divi =2; 
+	int divi =8; 
 	int banderafinal=0;
 	bool seguir;
 
+	string contenido2 = "datos.txt";
+    ofstream fs(contenido2.c_str());
+    fs << i << endl;
+    fs.close();
+	//cout << "El archivo ha sido creado correctamente" << endl;
+
 	while(true){
-		string iniciando = "Esperando solicitud....";
-		cout << " " <<iniciando <<endl;
+
+		//string iniciando = "Esperando solicitud....";
+		//cout << " " <<iniciando <<endl;
 		
 
 		string inicio;
 		zmqpp::message saludo;
 		servidor.receive(saludo);
 		saludo >> inicio;
-		cout << "Recibiendo: " << inicio <<endl;
+		//cout << "Recibiendo: " << inicio <<endl;
 		string resultado, k;
 				
 		if(inicio == "k"){
@@ -140,7 +75,7 @@ void kOptimo(){
 				zmqpp::message enviok;
 				enviados.push_back(elegidos[i]);
 				enviok << ki;
-				cout <<"Enviando: " << k<<endl;
+				//cout <<"Enviando: " << k<<endl;
 				servidor.send(enviok);
 				i++;
 			}
@@ -158,14 +93,14 @@ void kOptimo(){
 
     		pareja.first=atof(resultado.c_str());
     		pareja.second=atof(k.c_str());
-			cout<<"resultado: "<<pareja.first<<endl;
-			cout<<"k: "<<pareja.second<<endl;
+			//cout<<"resultado: "<<pareja.first<<endl;
+			//cout<<"k: "<<pareja.second<<endl;
 
 			kresultados[pareja.second]=pareja.first;
-
-			cout <<" k: " << kresultados[i] <<endl;
 			
 			if(kresultados[ultimo] != '\0'){
+
+			
 				double Var1= atan((kresultados[primero]-kresultados[mitad])/(mitad-primero)) * 180 / M_PI;
 				double Var2= atan((kresultados[mitad]-kresultados[ultimo])/(ultimo-mitad)) * 180 / M_PI;
 				double valor1;
@@ -173,14 +108,14 @@ void kOptimo(){
 				int ult=ultimo;
 				int pri=primero;
 				int aux;
-				if(Var1 > 45)
-					valor1=Var1-45;
+				if(Var1 > 30)
+					valor1=Var1-30;
 				else
-					valor1=45-Var1;
-				if(Var2 > 45)
-					valor2=Var2-45;
+					valor1=30-Var1;
+				if(Var2 > 30)
+					valor2=Var2-30;
 				else
-					valor2=45-Var2;
+					valor2=30-Var2;
 				if(valor1 <= valor2){
 					ultimo=mitad;
 					mitad=ultimo/2;
@@ -191,29 +126,49 @@ void kOptimo(){
 				}
 				elegidos.clear();
 				enviados.clear();
-				aux=(ult-pri)/divi;
+				elegidos.push_back(primero);
+				elegidos.push_back(mitad);
+				elegidos.push_back(ultimo);
+			
+				mejor.push_back(mitad);
+
+			/*	aux=(ult-pri)/divi;
 				int ban=aux;
-				//if (aux <= 1)
-				//	{return true;}	
-				cout << "ultimo: "<<ultimo<<" ----- "<< "Mitad: " <<mitad <<"------"<< " aux: "<< aux <<endl;
-				for(int i=0;primero + aux<ultimo;i++){
-					//cout<< aux <<"  aux "<< endl;
+			*/
+				cout << "ultimo: "<<ultimo<<" ----- "<< "Mitad: " <<mitad <<"------"<< " primero: "<< primero <<endl;
+			/* for(int i=0;primero + aux<ultimo;i++){
+
 					elegidos.push_back(aux);
 					aux=aux+ban;
-
 				}
+			*/	
+				for(int i=0; i<kresultados.size();i++){
+					if(kresultados[i] != '\0'){
+						cout <<" k: "<<i <<" resultado: " <<kresultados[i] <<endl;
+					}
+				}
+
+				cout <<"El mejor k hasta el momento es : " << mitad <<endl;
+
+				//elegidos.push_back(aux);
+				//elegidos.push_back(mitad);
+				//elegidos.push_back(ultimo);
+				string  enviar= "espere";
+			  	zmqpp::message enviando;
+			 	enviando << enviar;
+			  	servidor.send(enviando);
+				
 			}else{
-			  string  enviar= "terminado";
+			  string  enviar= "espere";
 			  zmqpp::message enviando;
 			  enviando << enviar;
 			  servidor.send(enviando);
-			  cout << "Enviando : " << enviar <<endl;
-			}
-			  
+			 // cout << "Enviando : " << enviar <<endl;
+		   }
 		}
 
-			
-	}		
+		
+  	}
 }
 
 
